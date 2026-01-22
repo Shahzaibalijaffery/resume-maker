@@ -971,11 +971,11 @@ function App() {
 
         <div className="preview-section">
           <div className="preview-header">
-      <div>
+            <div>
               <h2>Resume Preview</h2>
               <span className="ats-badge">✓ ATS-Friendly Format</span>
-              <p className="page-break-hint">💡 Click on section headings or items to add/remove manual page breaks</p>
-      </div>
+
+            </div>
             <button
               type="button"
               className="download-btn"
@@ -984,7 +984,7 @@ function App() {
               title="Download as ATS-friendly PDF"
             >
               {isGeneratingPDF ? '⏳ Generating PDF...' : '📥 Download PDF'}
-        </button>
+            </button>
           </div>
           <div className="resume-preview" ref={resumePreviewRef}>
             {/* Header - matches PDF */}

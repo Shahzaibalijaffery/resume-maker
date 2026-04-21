@@ -1,6 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import jsPDF from 'jspdf'
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import './App.css'
+
+GlobalWorkerOptions.workerSrc = pdfWorker
 
 function App() {
   const [resumeData, setResumeData] = useState({
@@ -76,9 +80,10 @@ function App() {
 
   const [currentSkill, setCurrentSkill] = useState('')
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
-  const [pageBreaks, setPageBreaks] = useState([])
-  const [manualPageBreaks, setManualPageBreaks] = useState([])
-  const resumePreviewRef = useRef(null)
+  const [previewPages, setPreviewPages] = useState([])
+  const [isRenderingPreview, setIsRenderingPreview] = useState(false)
+  const [previewError, setPreviewError] = useState('')
+  const [resumeFormat, setResumeFormat] = useState('format1') // format1: Education+Skills left, format2: Education+Skills right
 
   const handlePersonalInfoChange = (field, value) => {
     setResumeData(prev => ({
@@ -222,89 +227,6 @@ function App() {
       addSkill()
     }
   }
-
-  // Toggle manual page break at clicked element position
-  const toggleManualPageBreak = (element) => {
-    if (!resumePreviewRef.current) return
-
-    const previewElement = resumePreviewRef.current
-    const elementRect = element.getBoundingClientRect()
-    const previewRect = previewElement.getBoundingClientRect()
-
-    // Calculate Y position relative to preview element
-    const yPosition = elementRect.top - previewRect.top + previewElement.scrollTop
-
-    // Check if there's already a manual break near this position (within 10px tolerance)
-    const existingBreakIndex = manualPageBreaks.findIndex(
-      mb => Math.abs(mb - yPosition) < 10
-    )
-
-    if (existingBreakIndex >= 0) {
-      // Remove existing manual break
-      setManualPageBreaks(prev => prev.filter((_, i) => i !== existingBreakIndex))
-    } else {
-      // Add new manual break
-      setManualPageBreaks(prev => [...prev, yPosition].sort((a, b) => a - b))
-    }
-  }
-
-  // Calculate page breaks for preview - exactly matches PDF generation logic
-  useEffect(() => {
-    const calculatePageBreaks = async () => {
-      if (!resumePreviewRef.current) return
-
-      // Simulate the exact PDF generation calculation
-      // First, get the actual rendered dimensions (like html2canvas does)
-      const previewElement = resumePreviewRef.current
-
-      // Fast, non-blocking preview calculation (simple estimate to avoid html2canvas hang)
-      const pageHeightMM = 297
-      const topMarginMM = 10
-      const bottomMarginMM = 15
-      const contentHeightPerPageMM = pageHeightMM - topMarginMM - bottomMarginMM
-
-      const previewHeight = previewElement.scrollHeight
-      const previewWidth = previewElement.offsetWidth
-      const pageWidthMM = 210
-      const contentWidthMM = pageWidthMM - 15 - 15
-
-      const pixelsPerMM = (previewWidth - 70) / contentWidthMM // Account for padding
-      const contentHeightPerPagePx = contentHeightPerPageMM * pixelsPerMM
-      const totalPages = Math.ceil(previewHeight / contentHeightPerPagePx)
-
-      const breaks = []
-      let currentY = 30 // padding top
-      for (let i = 1; i < totalPages; i++) {
-        currentY += contentHeightPerPagePx
-        if (currentY < previewHeight - 35) {
-          breaks.push(currentY)
-        }
-      }
-      setPageBreaks(breaks)
-    }
-
-    // Calculate on mount and when content changes
-    const timeoutId = setTimeout(calculatePageBreaks, 200)
-
-    // Recalculate when window resizes or content changes
-    window.addEventListener('resize', calculatePageBreaks)
-
-    // Use MutationObserver to detect content changes
-    const observer = new MutationObserver(calculatePageBreaks)
-    if (resumePreviewRef.current) {
-      observer.observe(resumePreviewRef.current, {
-        childList: true,
-        subtree: true,
-        characterData: true
-      })
-    }
-
-    return () => {
-      clearTimeout(timeoutId)
-      window.removeEventListener('resize', calculatePageBreaks)
-      observer.disconnect()
-    }
-  }, [resumeData, manualPageBreaks]) // Recalculate when manual breaks change
 
   // Helper function to check if a region has text (non-white pixels)
   const hasTextInRegion = (imageData, y, width, height, threshold = 0.1) => {
@@ -465,10 +387,31 @@ function App() {
     return bestY
   }
 
-  const downloadPDF = async () => {
-    setIsGeneratingPDF(true)
+  // Format configuration: determines which sections go to which column
+  const getFormatConfig = (format) => {
+    const configs = {
+      format1: {
+        // Education + Skills on left, everything else on right
+        left: ['education', 'skills'],
+        right: ['summary', 'experience', 'projects']
+      },
+      format2: {
+        // Education + Skills on right, everything else on left
+        left: ['summary', 'experience', 'projects'],
+        right: ['education', 'skills']
+      }
+    }
+    return configs[format] || configs.format1
+  }
 
+  const downloadPDF = (saveToFile = false) => {
+    if (saveToFile) setIsGeneratingPDF(true)
     try {
+      // Check if jsPDF is available
+      if (typeof jsPDF === 'undefined') {
+        throw new Error('jsPDF library is not loaded')
+      }
+      
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
@@ -482,9 +425,17 @@ function App() {
       const primaryColor = '#1a1a1a'
       const accentColor = '#2f5fad'
       const fullName = resumeData.personalInfo.fullName || 'Your Name'
+      const formatConfig = getFormatConfig(resumeFormat)
 
-      // Two-column layout
-      const leftWidth = Math.min(60, contentWidth * 0.30)
+      // Two-column layout - adjust widths based on format
+      // Format 1: Education+Skills left (30%), Summary+Experience+Projects right (70%)
+      // Format 2: Summary+Experience+Projects left (70%), Education+Skills right (30%)
+      const leftColumnRatio = resumeFormat === 'format2' ? 0.70 : 0.30
+      // For format 1, cap left column at 60mm (30% is typically ~52mm, so 60mm is safe)
+      // For format 2, use full 70% width (no cap needed as it's the main content column)
+      const leftWidth = resumeFormat === 'format2' 
+        ? contentWidth * leftColumnRatio 
+        : Math.min(60, contentWidth * leftColumnRatio)
       const columnGap = 3
       const rightWidth = contentWidth - leftWidth - columnGap
       const leftX = leftMargin
@@ -525,7 +476,9 @@ function App() {
         const width = column === 'left' ? leftWidth : rightWidth
         const x = column === 'left' ? leftX : rightX
         const lines = pdf.splitTextToSize(text.toUpperCase(), width)
-        ensureSpaceCol(column, lines.length * lineHeight + sectionSpacing)
+        // Ensure lines is an array
+        const textLines = Array.isArray(lines) ? lines : [lines]
+        ensureSpaceCol(column, textLines.length * lineHeight + sectionSpacing)
         // IMPORTANT: Re-apply styling AFTER ensureSpaceCol() in case a new page was added
         // This ensures headings always have proper styling, especially when they're the first element on a new page
         pdf.setFont('helvetica', 'bold')
@@ -535,8 +488,8 @@ function App() {
         const currentY = column === 'left' ? leftY : rightY
         const prePad = currentY < topMargin + 10 ? 3 : 0
         const y = currentY + prePad
-        pdf.text(lines, x, y)
-        const used = lines.length * lineHeight + Math.max(sectionSpacing, 3.5) + prePad
+        pdf.text(textLines, x, y)
+        const used = textLines.length * lineHeight + Math.max(sectionSpacing, 3.5) + prePad
         if (column === 'left') {
           leftY += used
         } else {
@@ -550,7 +503,8 @@ function App() {
         const width = column === 'left' ? leftWidth : rightWidth
         const x = column === 'left' ? leftX : rightX
         const lines = pdf.splitTextToSize(text, width)
-        ensureSpaceCol(column, lines.length * lineHeight + 0.4)
+        const textLines = Array.isArray(lines) ? lines : [lines]
+        ensureSpaceCol(column, textLines.length * lineHeight + 0.4)
         const currentY = column === 'left' ? leftY : rightY
         // If first element after a page break, give a tiny pre-pad and a small size bump, but keep subheading color
         const isFirstAfterBreak = currentY <= topMargin + 18
@@ -560,8 +514,8 @@ function App() {
         pdf.setFontSize(size + sizeBoost)
         pdf.setTextColor(primaryColor)
         const y = currentY + prePad
-        pdf.text(lines, x, y)
-        const used = lines.length * lineHeight + 0.6 + prePad
+        pdf.text(textLines, x, y)
+        const used = textLines.length * lineHeight + 0.6 + prePad
         if (column === 'left') {
           leftY += used
         } else {
@@ -577,11 +531,12 @@ function App() {
         pdf.setFontSize(size)
         pdf.setTextColor(primaryColor)
         const lines = pdf.splitTextToSize(text, width)
-        ensureSpaceCol(column, lines.length * lineHeight)
+        const textLines = Array.isArray(lines) ? lines : [lines]
+        ensureSpaceCol(column, textLines.length * lineHeight)
         // IMPORTANT: compute Y after ensureSpaceCol() since it may add a page and reset cursors
         const y = column === 'left' ? leftY : rightY
-        pdf.text(lines, x, y)
-        const used = lines.length * lineHeight + 0.6
+        pdf.text(textLines, x, y)
+        const used = textLines.length * lineHeight + 0.6
         if (column === 'left') {
           leftY += used
         } else {
@@ -597,11 +552,12 @@ function App() {
         pdf.setFontSize(size)
         pdf.setTextColor(primaryColor)
         const lines = pdf.splitTextToSize(text, width)
-        ensureSpaceCol(column, lines.length * lineHeight)
+        const textLines = Array.isArray(lines) ? lines : [lines]
+        ensureSpaceCol(column, textLines.length * lineHeight)
         // IMPORTANT: compute Y after ensureSpaceCol() since it may add a page and reset cursors
         const y = column === 'left' ? leftY : rightY
-        pdf.text(lines, x, y)
-        const used = lines.length * lineHeight + 1.2
+        pdf.text(textLines, x, y)
+        const used = textLines.length * lineHeight + 1.2
         if (column === 'left') {
           leftY += used
         } else {
@@ -620,13 +576,14 @@ function App() {
           if (!item) return
           const bulletLine = `• ${item}`
           const lines = pdf.splitTextToSize(bulletLine, width)
-          ensureSpaceCol(column, lines.length * lineHeight)
+          const textLines = Array.isArray(lines) ? lines : [lines]
+          ensureSpaceCol(column, textLines.length * lineHeight)
           const y = column === 'left' ? leftY : rightY
-          pdf.text(lines, x, y)
+          pdf.text(textLines, x, y)
           if (column === 'left') {
-            leftY += lines.length * lineHeight + 0.8
+            leftY += textLines.length * lineHeight + 0.8
           } else {
-            rightY += lines.length * lineHeight + 0.8
+            rightY += textLines.length * lineHeight + 0.8
           }
         })
         if (column === 'left') {
@@ -649,8 +606,9 @@ function App() {
         const labelWidth = pdf.getTextWidth(label + ' ')
         pdf.setFont('helvetica', 'normal')
         const lines = pdf.splitTextToSize(value, width - labelWidth - 2)
-        pdf.text(lines, x + labelWidth, y)
-        const used = lines.length * lineHeight + 0.8
+        const textLines = Array.isArray(lines) ? lines : [lines]
+        pdf.text(textLines, x + labelWidth, y)
+        const used = textLines.length * lineHeight + 0.8
         if (column === 'left') leftY += used; else rightY += used
       }
 
@@ -674,68 +632,163 @@ function App() {
       leftY = topMargin + 22
       rightY = topMargin + 22
 
-      // LEFT COLUMN: Education + Skills
-      const hasEdu = resumeData.education.some(edu => edu.school || edu.degree)
-      if (hasEdu) {
-        addHeading('left', 'Education', 11, accentColor)
-        resumeData.education.forEach(edu => {
-          if (!edu.school && !edu.degree) return
-          addSubheading('left', edu.degree || 'Degree', 10.5)
-          addParagraph('left', edu.school || '', 9.0)
-          addParagraph('left', edu.field ? `Field: ${edu.field}` : '', 9.0)
-          addParagraph('left', edu.graduationDate ? `Graduation: ${edu.graduationDate}` : '', 9.0)
-          leftY += 2
-        })
+      // Helper function to determine which column a section should go to
+      const getColumn = (sectionName) => {
+        if (formatConfig.left.includes(sectionName)) return 'left'
+        if (formatConfig.right.includes(sectionName)) return 'right'
+        return 'right' // default
       }
 
-      if (resumeData.skills.length > 0) {
-        addHeading('left', 'Skills', 11, accentColor)
-        addBullets('left', resumeData.skills, 10)
+      // Add sections based on format configuration
+      const addEducation = (column) => {
+        const hasEdu = resumeData.education.some(edu => edu.school || edu.degree)
+        if (hasEdu) {
+          addHeading(column, 'Education', 11, accentColor)
+          resumeData.education.forEach(edu => {
+            if (!edu.school && !edu.degree) return
+            addSubheading(column, edu.degree || 'Degree', 10.5)
+            addParagraph(column, edu.school || '', 9.0)
+            addParagraph(column, edu.field ? `Field: ${edu.field}` : '', 9.0)
+            addParagraph(column, edu.graduationDate ? `Graduation: ${edu.graduationDate}` : '', 9.0)
+            if (column === 'left') leftY += 2; else rightY += 2
+          })
+        }
       }
 
-      // RIGHT COLUMN
-      if (resumeData.summary) {
-        addHeading('right', 'Professional Profile', 11.5, accentColor)
-        addParagraph('right', resumeData.summary, 9.4)
+      const addSkills = (column) => {
+        if (resumeData.skills.length > 0) {
+          addHeading(column, 'Skills', 11, accentColor)
+          addBullets(column, resumeData.skills, 10)
+        }
       }
 
-      const hasExp = resumeData.experience.some(exp => exp.company || exp.position || exp.description)
-      if (hasExp) {
-        addHeading('right', 'Professional Experience', 11.5, accentColor)
-        resumeData.experience.forEach(exp => {
-          if (!exp.company && !exp.position && !exp.description) return
-          addSubheading('right', exp.position || 'Position', 11)
-          addMetaLine('right', exp.company ? `${exp.company} — ${[exp.startDate, exp.endDate].filter(Boolean).join(' - ')}`.trim() : [exp.startDate, exp.endDate].filter(Boolean).join(' - '))
-          if (exp.description) {
-            // Keep experience as paragraph (no bullets)
-            addParagraph('right', exp.description, 9.0)
-          }
-          rightY += 2
-        })
+      const addSummary = (column) => {
+        if (resumeData.summary) {
+          addHeading(column, 'Professional Profile', 11.5, accentColor)
+          addParagraph(column, resumeData.summary, 9.4)
+        }
       }
 
-      const hasProjects = resumeData.projects.some(p => p.name || p.description)
-      if (hasProjects) {
-        addHeading('right', 'Projects', 11.5, accentColor)
-        resumeData.projects.forEach(project => {
-          if (!project.name && !project.description) return
-          addSubheading('right', project.name || 'Project', 11)
-          addParagraph('right', project.description, 9.0)
-          addParagraph('right', project.technologies ? `Tech: ${project.technologies}` : '', 9.0)
-          // Link removed per request; keep a tiny spacer
-          rightY += 1
-        })
+      const addExperience = (column) => {
+        const hasExp = resumeData.experience.some(exp => exp.company || exp.position || exp.description)
+        if (hasExp) {
+          addHeading(column, 'Professional Experience', 11.5, accentColor)
+          resumeData.experience.forEach(exp => {
+            if (!exp.company && !exp.position && !exp.description) return
+            addSubheading(column, exp.position || 'Position', 11)
+            addMetaLine(column, exp.company ? `${exp.company} — ${[exp.startDate, exp.endDate].filter(Boolean).join(' - ')}`.trim() : [exp.startDate, exp.endDate].filter(Boolean).join(' - '))
+            if (exp.description) {
+              addParagraph(column, exp.description, 9.0)
+            }
+            if (column === 'left') leftY += 2; else rightY += 2
+          })
+        }
       }
 
-      const fileName = fullName ? `${fullName.replace(/\s+/g, '_')}_Resume.pdf` : 'Resume.pdf'
-      pdf.save(fileName)
+      const addProjects = (column) => {
+        const hasProjects = resumeData.projects.some(p => p.name || p.description)
+        if (hasProjects) {
+          addHeading(column, 'Projects', 11.5, accentColor)
+          resumeData.projects.forEach(project => {
+            if (!project.name && !project.description) return
+            addSubheading(column, project.name || 'Project', 11)
+            addParagraph(column, project.description, 9.0)
+            addParagraph(column, project.technologies ? `Tech: ${project.technologies}` : '', 9.0)
+            if (column === 'left') leftY += 1; else rightY += 1
+          })
+        }
+      }
+
+      // Render sections in order based on format
+      // Left column sections
+      if (formatConfig.left.includes('summary')) addSummary('left')
+      if (formatConfig.left.includes('experience')) addExperience('left')
+      if (formatConfig.left.includes('projects')) addProjects('left')
+      if (formatConfig.left.includes('education')) addEducation('left')
+      if (formatConfig.left.includes('skills')) addSkills('left')
+
+      // Right column sections
+      if (formatConfig.right.includes('summary')) addSummary('right')
+      if (formatConfig.right.includes('experience')) addExperience('right')
+      if (formatConfig.right.includes('projects')) addProjects('right')
+      if (formatConfig.right.includes('education')) addEducation('right')
+      if (formatConfig.right.includes('skills')) addSkills('right')
+
+      if (saveToFile) {
+        const fileName = fullName ? `${fullName.replace(/\s+/g, '_')}_Resume.pdf` : 'Resume.pdf'
+        pdf.save(fileName)
+      }
+
+      return pdf
     } catch (error) {
       console.error('Error generating PDF:', error)
-      alert('Error generating PDF. Please try again.')
+      console.error('Error stack:', error.stack)
+      if (saveToFile) {
+        alert(`Error generating PDF: ${error.message || 'Unknown error'}. Please check the console for details.`)
+      }
+      throw error
     } finally {
-      setIsGeneratingPDF(false)
+      if (saveToFile) setIsGeneratingPDF(false)
     }
   }
+
+  useEffect(() => {
+    let cancelled = false
+    let loadingTask = null
+
+    const renderPdfPreview = async () => {
+      try {
+        setPreviewError('')
+        setIsRenderingPreview(true)
+        const pdf = downloadPDF(false)
+        if (!pdf) {
+          throw new Error('Preview PDF instance was not created')
+        }
+        if (cancelled) return
+
+        const arrayBuffer = pdf.output('arraybuffer')
+        if (!arrayBuffer) throw new Error('Unable to generate preview array buffer')
+
+        loadingTask = getDocument({ data: new Uint8Array(arrayBuffer) })
+        const pdfDocument = await loadingTask.promise
+
+        const renderedPages = []
+        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+          if (cancelled) return
+          const page = await pdfDocument.getPage(pageNumber)
+          const viewport = page.getViewport({ scale: 1.35 })
+          const canvas = document.createElement('canvas')
+          const context = canvas.getContext('2d')
+          if (!context) throw new Error('Unable to create canvas context')
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+          await page.render({ canvasContext: context, viewport }).promise
+          renderedPages.push(canvas.toDataURL('image/png'))
+        }
+
+        if (!cancelled) {
+          setPreviewPages(renderedPages)
+        }
+      } catch (error) {
+        console.error('Error rendering PDF preview:', error)
+        if (!cancelled) {
+          setPreviewError(error?.message || 'Failed to render preview')
+          setPreviewPages([])
+        }
+      } finally {
+        if (!cancelled) setIsRenderingPreview(false)
+      }
+    }
+
+    const timeoutId = setTimeout(renderPdfPreview, 200)
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+      if (loadingTask) {
+        loadingTask.destroy()
+      }
+    }
+  }, [resumeData, resumeFormat])
 
   return (
     <div className="app">
@@ -972,170 +1025,59 @@ function App() {
         <div className="preview-section">
           <div className="preview-header">
             <div>
-              <h2>Resume Preview</h2>
               <span className="ats-badge">✓ ATS-Friendly Format</span>
-
             </div>
-            <button
-              type="button"
-              className="download-btn"
-              onClick={downloadPDF}
-              disabled={isGeneratingPDF}
-              title="Download as ATS-friendly PDF"
-            >
-              {isGeneratingPDF ? '⏳ Generating PDF...' : '📥 Download PDF'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                <label htmlFor="format-select" style={{ fontSize: '14px', fontWeight: '500' }}>Format:</label>
+                <select
+                  id="format-select"
+                  value={resumeFormat}
+                  onChange={(e) => setResumeFormat(e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '14px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="format1">Format 1 (Edu+Skills Left)</option>
+                  <option value="format2">Format 2 (Edu+Skills Right)</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                className="download-btn"
+                onClick={() => downloadPDF(true)}
+                disabled={isGeneratingPDF}
+                title="Download PDF"
+              >
+                {isGeneratingPDF ? '⏳ Generating PDF...' : '📥 Download PDF'}
+              </button>
+            </div>
           </div>
-          <div className="resume-preview" ref={resumePreviewRef}>
-            {/* Header - matches PDF */}
-            <div className="resume-header-pdf">
-              <h1 className="resume-name">{resumeData.personalInfo.fullName || 'Your Name'}</h1>
-              <div className="contact-info-header">
-                {[
-                  resumeData.personalInfo.email,
-                  resumeData.personalInfo.phone,
-                  resumeData.personalInfo.address
-                ].filter(Boolean).join('   |   ')}
+          <div className="resume-preview">
+            {previewError ? (
+              <div style={{ padding: '20px', color: '#c82333' }}>
+                Preview failed: {previewError}
               </div>
-              <div className="header-divider"></div>
-            </div>
-
-            {/* Two-column layout - matches PDF */}
-            <div className="resume-content-pdf">
-              {/* LEFT COLUMN: Education + Skills */}
-              <div className="resume-column-left">
-                {resumeData.education.some(edu => edu.school || edu.degree) && (
-                  <section
-                    className="resume-section-pdf"
-                    onClick={(e) => {
-                      if (e.target.tagName === 'H2') {
-                        toggleManualPageBreak(e.currentTarget)
-                      }
-                    }}
-                    title="Click heading to add/remove page break"
-                  >
-                    <h2 className="resume-heading-pdf page-break-trigger">EDUCATION</h2>
-                    {resumeData.education.map((edu, index) => {
-                      if (!edu.school && !edu.degree) return null
-                      return (
-                        <div key={index} className="resume-item-pdf">
-                          <h3 className="resume-subheading-pdf">{edu.degree || 'Degree'}</h3>
-                          <p className="resume-text-pdf">{edu.school || ''}</p>
-                          {edu.field && <p className="resume-text-pdf">Field: {edu.field}</p>}
-                          {edu.graduationDate && <p className="resume-text-pdf">Graduation: {edu.graduationDate}</p>}
-                        </div>
-                      )
-                    })}
-                  </section>
-                )}
-
-                {resumeData.skills.length > 0 && (
-                  <section
-                    className="resume-section-pdf"
-                    onClick={(e) => {
-                      if (e.target.tagName === 'H2') {
-                        toggleManualPageBreak(e.currentTarget)
-                      }
-                    }}
-                    title="Click heading to add/remove page break"
-                  >
-                    <h2 className="resume-heading-pdf page-break-trigger">SKILLS</h2>
-                    <ul className="resume-skills-list-pdf">
-                      {resumeData.skills.map((skill, index) => (
-                        <li key={index}>{skill}</li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
+            ) : previewPages.length === 0 ? (
+              <div style={{ padding: '20px', color: '#666' }}>
+                {isRenderingPreview ? 'Rendering PDF preview...' : 'Preparing preview...'}
               </div>
-
-              {/* RIGHT COLUMN: Profile + Experience + Projects */}
-              <div className="resume-column-right">
-                {resumeData.summary && (
-                  <section
-                    className="resume-section-pdf"
-                    onClick={(e) => {
-                      if (e.target.tagName === 'H2') {
-                        toggleManualPageBreak(e.currentTarget)
-                      }
-                    }}
-                    title="Click heading to add/remove page break"
-                  >
-                    <h2 className="resume-heading-pdf page-break-trigger">PROFESSIONAL PROFILE</h2>
-                    <p className="resume-text-pdf">{resumeData.summary}</p>
-                  </section>
-                )}
-
-                {resumeData.experience.some(exp => exp.company || exp.position) && (
-                  <section
-                    className="resume-section-pdf"
-                    onClick={(e) => {
-                      if (e.target.tagName === 'H2') {
-                        toggleManualPageBreak(e.currentTarget)
-                      }
-                    }}
-                    title="Click heading to add/remove page break"
-                  >
-                    <h2 className="resume-heading-pdf page-break-trigger">PROFESSIONAL EXPERIENCE</h2>
-                    {resumeData.experience.map((exp, index) => {
-                      if (!exp.company && !exp.position && !exp.description) return null
-                      return (
-                        <div
-                          key={index}
-                          className="resume-item-pdf"
-                          onClick={(e) => {
-                            if (e.target.tagName === 'H3') {
-                              toggleManualPageBreak(e.currentTarget)
-                            }
-                          }}
-                          title="Click item heading to add/remove page break"
-                        >
-                          <h3 className="resume-subheading-pdf">{exp.position || 'Position'}</h3>
-                          <p className="resume-meta-pdf">
-                            {exp.company ? `${exp.company} — ` : ''}
-                            {[exp.startDate, exp.endDate].filter(Boolean).join(' - ')}
-                          </p>
-                          {exp.description && <p className="resume-text-pdf">{exp.description}</p>}
-                        </div>
-                      )
-                    })}
-                  </section>
-                )}
-
-                {resumeData.projects.some(project => project.name || project.description) && (
-                  <section
-                    className="resume-section-pdf"
-                    onClick={(e) => {
-                      if (e.target.tagName === 'H2') {
-                        toggleManualPageBreak(e.currentTarget)
-                      }
-                    }}
-                    title="Click heading to add/remove page break"
-                  >
-                    <h2 className="resume-heading-pdf page-break-trigger">PROJECTS</h2>
-                    {resumeData.projects.map((project, index) => {
-                      if (!project.name && !project.description) return null
-                      return (
-                        <div
-                          key={index}
-                          className="resume-item-pdf"
-                          onClick={(e) => {
-                            if (e.target.tagName === 'H3') {
-                              toggleManualPageBreak(e.currentTarget)
-                            }
-                          }}
-                          title="Click item heading to add/remove page break"
-                        >
-                          <h3 className="resume-subheading-pdf">{project.name || 'Project'}</h3>
-                          {project.description && <p className="resume-text-pdf">{project.description}</p>}
-                          {project.technologies && <p className="resume-text-pdf">Tech: {project.technologies}</p>}
-                        </div>
-                      )
-                    })}
-                  </section>
-                )}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {previewPages.map((pageSrc, index) => (
+                  <img
+                    key={index}
+                    src={pageSrc}
+                    alt={`PDF preview page ${index + 1}`}
+                    style={{ width: '100%', border: '1px solid #e3e7ef', background: '#fff' }}
+                  />
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

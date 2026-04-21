@@ -69,9 +69,7 @@
   margin-bottom: 25px;
   flex-wrap: wrap;
   gap: 15px;
-  width: 210mm; /* Match resume-preview width */
-  max-width: 210mm;
-  min-width: 210mm;
+
   margin-left: auto;
   margin-right: auto;
 }
@@ -272,21 +270,6 @@
 }
 
 .resume-preview {
-  font-family: 'Calibri', 'Arial', 'Helvetica', sans-serif;
-  color: #2c3e50;
-  line-height: 1.6;
-  background: white;
-  padding: 30px 35px;
-  min-height: 100px;
-  box-sizing: border-box;
-  font-size: 0.9rem;
-  letter-spacing: 0.2px;
-  position: relative;
-  width: 210mm; /* A4 width */
-  max-width: 210mm;
-  min-width: 210mm;
-  margin: 0 auto;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .page-break-indicator {
@@ -294,7 +277,13 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(to right, transparent, #667eea 20%, #667eea 80%, transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    #667eea 20%,
+    #667eea 80%,
+    transparent
+  );
   border-top: 1px dashed #999;
   border-bottom: 1px dashed #999;
   z-index: 100;
@@ -305,7 +294,13 @@
 }
 
 .page-break-indicator.manual-page-break {
-  background: linear-gradient(to right, transparent, #28a745 20%, #28a745 80%, transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    #28a745 20%,
+    #28a745 80%,
+    transparent
+  );
   border-top: 2px solid #28a745;
   border-bottom: 2px solid #28a745;
   height: 3px;
@@ -349,7 +344,7 @@
   color: #2f5fad;
   margin: 0 0 5px 0;
   text-transform: uppercase;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
   letter-spacing: 0.2px;
 }
 
@@ -358,7 +353,7 @@
   font-size: 11px;
   color: #1a1a1a;
   margin-bottom: 14px;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
   line-height: 1.4;
 }
 
@@ -373,7 +368,7 @@
 .resume-content-pdf {
   display: flex;
   gap: 12px;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
   align-items: flex-start;
 }
 
@@ -389,6 +384,35 @@
   min-width: 0;
 }
 
+/* Format-specific column widths */
+/* Format 1: Education+Skills left (30%), Summary+Experience+Projects right (70%) */
+.resume-content-pdf.format1 .resume-column-left {
+  width: 30%;
+  min-width: 30%;
+  max-width: 60mm;
+  flex-shrink: 0;
+}
+
+.resume-content-pdf.format1 .resume-column-right {
+  width: 70%;
+  min-width: 70%;
+  flex-shrink: 0;
+}
+
+/* Format 2: Summary+Experience+Projects left (70%), Education+Skills right (30%) */
+.resume-content-pdf.format2 .resume-column-left {
+  width: 70%;
+  min-width: 70%;
+  flex-shrink: 0;
+}
+
+.resume-content-pdf.format2 .resume-column-right {
+  width: 30%;
+  min-width: 30%;
+  max-width: 60mm;
+  flex-shrink: 0;
+}
+
 /* Section styling */
 .resume-section-pdf {
   margin-bottom: 16px;
@@ -400,7 +424,7 @@
   color: #2f5fad;
   text-transform: uppercase;
   margin: 0 0 5px 0;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
   letter-spacing: 0.15px;
 }
 
@@ -409,7 +433,7 @@
   font-weight: bold;
   color: #1a1a1a;
   margin: 0 0 2px 0;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
 }
 
 .resume-text-pdf {
@@ -417,7 +441,7 @@
   color: #1a1a1a;
   line-height: 1.4;
   margin: 0 0 4px 0;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
 }
 
 .resume-meta-pdf {
@@ -425,7 +449,7 @@
   color: #1a1a1a;
   line-height: 1.4;
   margin: 0 0 4px 0;
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: "Helvetica", "Arial", sans-serif;
 }
 
 .resume-item-pdf {
@@ -447,7 +471,7 @@
 }
 
 .resume-skills-list-pdf li::before {
-  content: '• ';
+  content: "• ";
   margin-right: 4px;
 }
 
@@ -461,7 +485,7 @@
 }
 
 .resume-header::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -2px;
   left: 50%;
@@ -478,7 +502,7 @@
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: none;
-  font-family: 'Calibri', 'Arial', 'Helvetica', sans-serif;
+  font-family: "Calibri", "Arial", "Helvetica", sans-serif;
 }
 
 .contact-info {
@@ -501,7 +525,7 @@
 }
 
 .contact-info span:not(:last-child)::after {
-  content: '•';
+  content: "•";
   position: absolute;
   right: -6px;
   color: #bbb;
@@ -552,7 +576,7 @@
 }
 
 .resume-section h2::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -2px;
   left: 0;
@@ -674,9 +698,6 @@
   }
 
   .resume-preview {
-    width: 100%;
-    max-width: 210mm;
-    min-width: auto;
   }
 
   .preview-header {

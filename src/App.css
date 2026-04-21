@@ -140,6 +140,39 @@
   font-size: 1.2rem;
 }
 
+.editable-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.editable-heading-row h3 {
+  margin: 0;
+  flex: 1;
+}
+
+.heading-edit-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.heading-action-btn {
+  border: 1px solid #667eea;
+  background: #667eea;
+  color: white;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.heading-action-btn.secondary {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
 .form-section input,
 .form-section textarea {
   width: 100%;
@@ -267,9 +300,6 @@
 
 .skill-remove:hover {
   background: rgba(255, 255, 255, 0.5);
-}
-
-.resume-preview {
 }
 
 .page-break-indicator {
@@ -695,9 +725,6 @@
   .form-section,
   .preview-section {
     max-height: none;
-  }
-
-  .resume-preview {
   }
 
   .preview-header {

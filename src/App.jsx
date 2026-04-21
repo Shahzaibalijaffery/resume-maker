@@ -84,6 +84,16 @@ function App() {
   const [isRenderingPreview, setIsRenderingPreview] = useState(false)
   const [previewError, setPreviewError] = useState('')
   const [resumeFormat, setResumeFormat] = useState('format1') // format1: Education+Skills left, format2: Education+Skills right
+  const [sectionHeadings, setSectionHeadings] = useState({
+    personalInfo: 'Personal Information',
+    summary: 'Professional Profile',
+    experience: 'Professional Experience',
+    education: 'Education',
+    projects: 'Projects',
+    skills: 'Skills'
+  })
+  const [editingHeadingKey, setEditingHeadingKey] = useState(null)
+  const [headingDraft, setHeadingDraft] = useState('')
 
   const handlePersonalInfoChange = (field, value) => {
     setResumeData(prev => ({
@@ -227,6 +237,63 @@ function App() {
       addSkill()
     }
   }
+
+  const startEditingHeading = (key) => {
+    setEditingHeadingKey(key)
+    setHeadingDraft(sectionHeadings[key] || '')
+  }
+
+  const saveHeadingEdit = () => {
+    const trimmedHeading = headingDraft.trim()
+    if (!editingHeadingKey || !trimmedHeading) return
+    setSectionHeadings(prev => ({
+      ...prev,
+      [editingHeadingKey]: trimmedHeading
+    }))
+    setEditingHeadingKey(null)
+    setHeadingDraft('')
+  }
+
+  const cancelHeadingEdit = () => {
+    setEditingHeadingKey(null)
+    setHeadingDraft('')
+  }
+
+  const renderEditableHeading = (key) => (
+    <div className="editable-heading-row">
+      {editingHeadingKey === key ? (
+        <>
+          <input
+            type="text"
+            className="heading-edit-input"
+            value={headingDraft}
+            onChange={(e) => setHeadingDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveHeadingEdit()
+              if (e.key === 'Escape') cancelHeadingEdit()
+            }}
+          />
+          <button type="button" className="heading-action-btn" onClick={saveHeadingEdit}>
+            Save
+          </button>
+          <button type="button" className="heading-action-btn secondary" onClick={cancelHeadingEdit}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <>
+            <h3>{sectionHeadings[key]}</h3>
+        {key !== 'personalInfo' && (
+          <>
+            <button type="button" className="heading-action-btn" onClick={() => startEditingHeading(key)}>
+              Edit
+            </button>
+          </>
+        )}
+        </>
+      )}
+    </div>
+  )
 
   // Helper function to check if a region has text (non-white pixels)
   const hasTextInRegion = (imageData, y, width, height, threshold = 0.1) => {
@@ -643,7 +710,7 @@ function App() {
       const addEducation = (column) => {
         const hasEdu = resumeData.education.some(edu => edu.school || edu.degree)
         if (hasEdu) {
-          addHeading(column, 'Education', 11, accentColor)
+          addHeading(column, sectionHeadings.education, 11, accentColor)
           resumeData.education.forEach(edu => {
             if (!edu.school && !edu.degree) return
             addSubheading(column, edu.degree || 'Degree', 10.5)
@@ -657,14 +724,14 @@ function App() {
 
       const addSkills = (column) => {
         if (resumeData.skills.length > 0) {
-          addHeading(column, 'Skills', 11, accentColor)
+          addHeading(column, sectionHeadings.skills, 11, accentColor)
           addBullets(column, resumeData.skills, 10)
         }
       }
 
       const addSummary = (column) => {
         if (resumeData.summary) {
-          addHeading(column, 'Professional Profile', 11.5, accentColor)
+          addHeading(column, sectionHeadings.summary, 11.5, accentColor)
           addParagraph(column, resumeData.summary, 9.4)
         }
       }
@@ -672,7 +739,7 @@ function App() {
       const addExperience = (column) => {
         const hasExp = resumeData.experience.some(exp => exp.company || exp.position || exp.description)
         if (hasExp) {
-          addHeading(column, 'Professional Experience', 11.5, accentColor)
+          addHeading(column, sectionHeadings.experience, 11.5, accentColor)
           resumeData.experience.forEach(exp => {
             if (!exp.company && !exp.position && !exp.description) return
             addSubheading(column, exp.position || 'Position', 11)
@@ -688,7 +755,7 @@ function App() {
       const addProjects = (column) => {
         const hasProjects = resumeData.projects.some(p => p.name || p.description)
         if (hasProjects) {
-          addHeading(column, 'Projects', 11.5, accentColor)
+          addHeading(column, sectionHeadings.projects, 11.5, accentColor)
           resumeData.projects.forEach(project => {
             if (!project.name && !project.description) return
             addSubheading(column, project.name || 'Project', 11)
@@ -788,7 +855,7 @@ function App() {
         loadingTask.destroy()
       }
     }
-  }, [resumeData, resumeFormat])
+  }, [resumeData, resumeFormat, sectionHeadings])
 
   return (
     <div className="app">
@@ -802,7 +869,7 @@ function App() {
           <h2>Resume Information</h2>
 
           <section className="form-group">
-            <h3>Personal Information</h3>
+            {renderEditableHeading('personalInfo')}
             <input
               type="text"
               placeholder="Full Name"
@@ -842,7 +909,7 @@ function App() {
           </section>
 
           <section className="form-group">
-            <h3>Professional Summary</h3>
+            {renderEditableHeading('summary')}
             <textarea
               placeholder="Write a brief summary about yourself..."
               value={resumeData.summary}
@@ -852,7 +919,7 @@ function App() {
           </section>
 
           <section className="form-group">
-            <h3>Experience</h3>
+            {renderEditableHeading('experience')}
             {resumeData.experience.map((exp, index) => (
               <div key={index} className="experience-item">
                 <input
@@ -904,7 +971,7 @@ function App() {
           </section>
 
           <section className="form-group">
-            <h3>Education</h3>
+            {renderEditableHeading('education')}
             {resumeData.education.map((edu, index) => (
               <div key={index} className="education-item">
                 <input
@@ -948,7 +1015,7 @@ function App() {
           </section>
 
           <section className="form-group">
-            <h3>Projects</h3>
+            {renderEditableHeading('projects')}
             {resumeData.projects.map((project, index) => (
               <div key={index} className="project-item">
                 <input
@@ -992,7 +1059,7 @@ function App() {
           </section>
 
           <section className="form-group">
-            <h3>Skills</h3>
+            {renderEditableHeading('skills')}
             <div className="skill-input">
               <input
                 type="text"

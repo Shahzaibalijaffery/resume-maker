@@ -91,6 +91,14 @@
   margin-top: 5px;
 }
 
+.ats-guidance {
+  margin: 8px 0 0 0;
+  font-size: 0.82rem;
+  color: #4b5563;
+  max-width: 380px;
+  line-height: 1.35;
+}
+
 .page-break-hint {
   font-size: 0.85rem;
   color: #666;

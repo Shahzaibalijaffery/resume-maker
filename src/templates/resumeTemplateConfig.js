@@ -25,7 +25,7 @@ export const TEMPLATE_DEFAULTS = {
 
 export const RESUME_FORMATS = {
   format1: {
-    label: "Format 1 (Edu+Skills Left)",
+    label: "Executive Sidebar",
     layout: "two-column",
     leftRatio: 0.3,
     maxLeftWidthMm: 60,
@@ -46,10 +46,11 @@ export const RESUME_FORMATS = {
     },
   },
   format2: {
-    label: "Format 2 (Edu+Skills Right)",
+    label: "Executive Sidebar Reverse",
     layout: "two-column",
     leftRatio: 0.7,
-    columnGap: 3,
+    columnGap: 4,
+    maxLeftWidthMm: 120,
     header: {
       nameAlign: "left",
       contactAlign: "center",
@@ -66,7 +67,7 @@ export const RESUME_FORMATS = {
     },
   },
   singleClassic: {
-    label: "Single Column - Classic",
+    label: "Professional Classic",
     layout: "single-column",
     header: {
       nameAlign: "center",
@@ -90,7 +91,7 @@ export const RESUME_FORMATS = {
     },
   },
   singleCompact: {
-    label: "Single Column - Compact",
+    label: "Professional Centered",
     layout: "single-column",
     header: {
       nameAlign: "center",

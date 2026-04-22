@@ -58,10 +58,13 @@ export const createResumePdfDocument = ({ resumeData, resumeFormat, sectionHeadi
   } else {
     const leftRatio = formatConfig.leftRatio ?? 0.30
     const columnGap = formatConfig.columnGap ?? 3
+    // Calculate widths from usable space (content minus gap) so mirrored formats
+    // keep a consistent gutter and proportional columns.
+    const usableColumnWidth = contentWidth - columnGap
     const leftWidth = formatConfig.maxLeftWidthMm
-      ? Math.min(formatConfig.maxLeftWidthMm, contentWidth * leftRatio)
-      : contentWidth * leftRatio
-    const rightWidth = contentWidth - leftWidth - columnGap
+      ? Math.min(formatConfig.maxLeftWidthMm, usableColumnWidth * leftRatio)
+      : usableColumnWidth * leftRatio
+    const rightWidth = usableColumnWidth - leftWidth
     columns.left = { x: leftMargin, width: leftWidth }
     columns.right = { x: leftMargin + leftWidth + columnGap, width: rightWidth }
     yPositions.left = topMargin

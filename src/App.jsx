@@ -3,7 +3,7 @@ import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import EditableHeading from './components/EditableHeading'
 import { createResumePdfDocument } from './templates/resumePdfTemplate'
-import { ATS_HEADING_OPTIONS, DEFAULT_SECTION_HEADINGS, DEFAULT_RESUME_FORMAT, getResumeFormatOptions } from './templates/resumeTemplateConfig'
+import { ATS_HEADING_OPTIONS, DEFAULT_SECTION_HEADINGS, DEFAULT_RESUME_FORMAT, getResumeFormatConfig, getResumeFormatOptions } from './templates/resumeTemplateConfig'
 import './App.css'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -90,6 +90,11 @@ function App() {
   const [editingHeadingKey, setEditingHeadingKey] = useState(null)
   const [headingDraft, setHeadingDraft] = useState('')
   const formatOptions = getResumeFormatOptions()
+  const selectedFormatConfig = getResumeFormatConfig(resumeFormat)
+  const isSingleColumnFormat = selectedFormatConfig.layout === 'single-column'
+  const atsGuidanceText = isSingleColumnFormat
+    ? 'Recommended for broad ATS compatibility, including legacy systems.'
+    : 'Optimized for modern ATS platforms; some legacy parsers may read sections less accurately.'
 
   const handlePersonalInfoChange = (field, value) => {
     setResumeData(prev => ({
@@ -587,6 +592,7 @@ function App() {
           <div className="preview-header">
             <div>
               <span className="ats-badge">✓ ATS-Friendly Format</span>
+              <p className="ats-guidance">{atsGuidanceText}</p>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>

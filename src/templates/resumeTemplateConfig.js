@@ -31,7 +31,7 @@ export const RESUME_FORMATS = {
     maxLeftWidthMm: 60,
     columnGap: 3,
     header: {
-      nameAlign: "left",
+      nameAlign: "center",
       contactAlign: "center",
     },
     sections: {
@@ -52,7 +52,7 @@ export const RESUME_FORMATS = {
     columnGap: 6,
     maxLeftWidthMm: 120,
     header: {
-      nameAlign: "left",
+      nameAlign: "center",
       contactAlign: "center",
     },
     sections: {

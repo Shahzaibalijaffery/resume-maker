@@ -48,8 +48,8 @@ export const RESUME_FORMATS = {
   format2: {
     label: "Executive Sidebar Reverse",
     layout: "two-column",
-    leftRatio: 0.7,
-    columnGap: 4,
+    leftRatio: 0.8,
+    columnGap: 6,
     maxLeftWidthMm: 120,
     header: {
       nameAlign: "left",

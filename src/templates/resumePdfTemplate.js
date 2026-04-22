@@ -405,8 +405,15 @@ export const createResumePdfDocument = ({ resumeData, resumeFormat, sectionHeadi
   } else {
     const leftOrder = formatConfig.columns?.left || []
     const rightOrder = formatConfig.columns?.right || []
-    renderSections('left', leftOrder)
-    renderSections('right', rightOrder)
+    if (resumeFormat === 'format2') {
+      // Render right column first so left-column overflow doesn't force
+      // right-column content onto later pages for reverse executive layout.
+      renderSections('right', rightOrder)
+      renderSections('left', leftOrder)
+    } else {
+      renderSections('left', leftOrder)
+      renderSections('right', rightOrder)
+    }
   }
 
   return { pdf, fileName: buildFileName(fullName) }

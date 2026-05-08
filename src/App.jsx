@@ -4,7 +4,6 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import EditableHeading from './components/EditableHeading'
 import { createResumePdfDocument } from './templates/resumePdfTemplate'
 import { ATS_HEADING_OPTIONS, DEFAULT_SECTION_HEADINGS, DEFAULT_RESUME_FORMAT, getResumeFormatConfig, getResumeFormatOptions } from './templates/resumeTemplateConfig'
-import { parseCvFile } from './parsing/cvParser'
 import './App.css'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -90,9 +89,7 @@ function App() {
   const [sectionHeadings, setSectionHeadings] = useState(DEFAULT_SECTION_HEADINGS)
   const [editingHeadingKey, setEditingHeadingKey] = useState(null)
   const [headingDraft, setHeadingDraft] = useState('')
-  const [isParsingCv, setIsParsingCv] = useState(false)
-  const [cvParseMessage, setCvParseMessage] = useState('')
-  const [cvParseError, setCvParseError] = useState('')
+  const [isFormDrawerOpen, setIsFormDrawerOpen] = useState(false)
   const formatOptions = getResumeFormatOptions()
   const selectedFormatConfig = getResumeFormatConfig(resumeFormat)
   const isSingleColumnFormat = selectedFormatConfig.layout === 'single-column'
@@ -243,29 +240,6 @@ function App() {
     }
   }
 
-  const handleCvUpload = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    try {
-      setIsParsingCv(true)
-      setCvParseError('')
-      setCvParseMessage('')
-      const { resumeData: parsedResumeData, warnings } = await parseCvFile(file)
-      setResumeData(parsedResumeData)
-      if (warnings.length > 0) {
-        setCvParseMessage(`CV imported with notes: ${warnings.join(' ')}`)
-      } else {
-        setCvParseMessage('CV parsed successfully. Review and adjust details if needed.')
-      }
-    } catch (error) {
-      setCvParseError(error?.message || 'Failed to parse CV file.')
-    } finally {
-      setIsParsingCv(false)
-      event.target.value = ''
-    }
-  }
-
   const startEditingHeading = (key) => {
     setEditingHeadingKey(key)
     const options = ATS_HEADING_OPTIONS[key] || []
@@ -349,12 +323,17 @@ function App() {
         for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
           if (cancelled) return
           const page = await pdfDocument.getPage(pageNumber)
-          const viewport = page.getViewport({ scale: 1.35 })
+          const previewScale = 1.8
+          const deviceScale = Math.min(window.devicePixelRatio || 1, 2.5)
+          const viewport = page.getViewport({ scale: previewScale })
           const canvas = document.createElement('canvas')
           const context = canvas.getContext('2d')
           if (!context) throw new Error('Unable to create canvas context')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
+          canvas.width = Math.floor(viewport.width * deviceScale)
+          canvas.height = Math.floor(viewport.height * deviceScale)
+          canvas.style.width = `${viewport.width}px`
+          canvas.style.height = `${viewport.height}px`
+          context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0)
           await page.render({ canvasContext: context, viewport }).promise
           renderedPages.push(canvas.toDataURL('image/png'))
         }
@@ -390,23 +369,41 @@ function App() {
         <p>Create your professional resume in minutes</p>
       </header>
 
-      <div className="container">
-        <div className="form-section">
-          <h2>Resume Information</h2>
-          <div className="cv-import-panel">
-            <p className="cv-import-title">Import Existing CV</p>
-            <p className="cv-import-subtitle">Upload a PDF or DOCX file to auto-fill this form.</p>
-            <input
-              type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={handleCvUpload}
-              disabled={isParsingCv}
-            />
-            {isParsingCv && <p className="cv-import-status">Parsing CV...</p>}
-            {!isParsingCv && cvParseMessage && <p className="cv-import-status success">{cvParseMessage}</p>}
-            {!isParsingCv && cvParseError && <p className="cv-import-status error">{cvParseError}</p>}
-          </div>
+      <button
+        type="button"
+        className="drawer-toggle-btn"
+        onClick={() => setIsFormDrawerOpen(true)}
+        aria-expanded={isFormDrawerOpen}
+        aria-controls="resume-form-drawer"
+      >
+        Open Resume Form
+      </button>
 
+      {isFormDrawerOpen && (
+        <button
+          type="button"
+          aria-label="Close resume form drawer"
+          className="drawer-backdrop"
+          onClick={() => setIsFormDrawerOpen(false)}
+        />
+      )}
+
+      <div className="container">
+        <aside
+          id="resume-form-drawer"
+          className={`form-section drawer ${isFormDrawerOpen ? 'open' : ''}`}
+          aria-hidden={!isFormDrawerOpen}
+        >
+          <div className="drawer-header">
+            <h2>Resume Information</h2>
+            <button
+              type="button"
+              className="drawer-close-btn"
+              onClick={() => setIsFormDrawerOpen(false)}
+            >
+              Close
+            </button>
+          </div>
           <section className="form-group">
             {renderEditableHeading('personalInfo')}
             <input
@@ -626,7 +623,7 @@ function App() {
               ))}
             </div>
           </section>
-        </div>
+        </aside>
 
         <div className="preview-section">
           <div className="preview-header">
@@ -634,8 +631,8 @@ function App() {
               <span className="ats-badge">✓ ATS-Friendly Format</span>
               <p className="ats-guidance">{atsGuidanceText}</p>
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+            <div className="preview-controls">
+              <div className="format-control">
                 <label htmlFor="format-select" style={{ fontSize: '14px', fontWeight: '500' }}>Format:</label>
                 <select
                   id="format-select"
@@ -659,9 +656,9 @@ function App() {
                 className="download-btn"
                 onClick={() => downloadPDF(true)}
                 disabled={isGeneratingPDF}
-                title="Download PDF"
+                title="Download"
               >
-                {isGeneratingPDF ? '⏳ Generating PDF...' : '📥 Download PDF'}
+                {isGeneratingPDF ? '⏳ Generating...' : '📥 Download'}
               </button>
             </div>
           </div>

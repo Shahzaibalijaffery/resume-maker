@@ -1,0 +1,128 @@
+.landing-page {
+  margin: 0 auto;
+  max-width: 980px;
+  padding: 48px 20px 64px;
+  color: #102040;
+  line-height: 1.65;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.hero {
+  background: linear-gradient(160deg, #eef3ff, #f8fbff);
+  border: 1px solid #d8e4ff;
+  border-radius: 16px;
+  padding: 34px 28px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #3557cc;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin-bottom: 14px;
+  color: #0d1f49;
+}
+
+.hero p {
+  font-size: 1.03rem;
+  color: #2d3e5f;
+}
+
+.cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.primary-btn,
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.primary-btn {
+  background: #3557cc;
+  color: #fff;
+}
+
+.secondary-btn {
+  background: #fff;
+  color: #3557cc;
+  border: 1px solid #3557cc;
+}
+
+.content-section {
+  background: #fff;
+  border: 1px solid #e3eaf6;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.content-section h2 {
+  margin-bottom: 12px;
+  color: #1b2c54;
+  font-size: 1.35rem;
+}
+
+.content-section h3 {
+  margin-top: 16px;
+  margin-bottom: 6px;
+  color: #223863;
+  font-size: 1.05rem;
+}
+
+.content-section p {
+  margin-bottom: 12px;
+  color: #2f3f5f;
+}
+
+.content-section ul,
+.content-section ol {
+  padding-left: 22px;
+  margin-top: 8px;
+}
+
+.content-section li {
+  margin-bottom: 7px;
+}
+
+.landing-footer {
+  text-align: center;
+  margin-top: 14px;
+  padding: 26px 14px;
+}
+
+.landing-footer p {
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #1d315a;
+}
+
+@media (max-width: 760px) {
+  .landing-page {
+    padding-top: 26px;
+  }
+
+  .hero h1 {
+    font-size: 1.65rem;
+  }
+
+  .content-section {
+    padding: 18px;
+  }
+}

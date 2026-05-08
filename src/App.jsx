@@ -4,6 +4,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import EditableHeading from './components/EditableHeading'
 import { createResumePdfDocument } from './templates/resumePdfTemplate'
 import { ATS_HEADING_OPTIONS, DEFAULT_SECTION_HEADINGS, DEFAULT_RESUME_FORMAT, getResumeFormatConfig, getResumeFormatOptions } from './templates/resumeTemplateConfig'
+import { parseCvFile } from './parsing/cvParser'
 import './App.css'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -89,6 +90,9 @@ function App() {
   const [sectionHeadings, setSectionHeadings] = useState(DEFAULT_SECTION_HEADINGS)
   const [editingHeadingKey, setEditingHeadingKey] = useState(null)
   const [headingDraft, setHeadingDraft] = useState('')
+  const [isParsingCv, setIsParsingCv] = useState(false)
+  const [cvParseMessage, setCvParseMessage] = useState('')
+  const [cvParseError, setCvParseError] = useState('')
   const formatOptions = getResumeFormatOptions()
   const selectedFormatConfig = getResumeFormatConfig(resumeFormat)
   const isSingleColumnFormat = selectedFormatConfig.layout === 'single-column'
@@ -239,6 +243,29 @@ function App() {
     }
   }
 
+  const handleCvUpload = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setIsParsingCv(true)
+      setCvParseError('')
+      setCvParseMessage('')
+      const { resumeData: parsedResumeData, warnings } = await parseCvFile(file)
+      setResumeData(parsedResumeData)
+      if (warnings.length > 0) {
+        setCvParseMessage(`CV imported with notes: ${warnings.join(' ')}`)
+      } else {
+        setCvParseMessage('CV parsed successfully. Review and adjust details if needed.')
+      }
+    } catch (error) {
+      setCvParseError(error?.message || 'Failed to parse CV file.')
+    } finally {
+      setIsParsingCv(false)
+      event.target.value = ''
+    }
+  }
+
   const startEditingHeading = (key) => {
     setEditingHeadingKey(key)
     const options = ATS_HEADING_OPTIONS[key] || []
@@ -366,6 +393,19 @@ function App() {
       <div className="container">
         <div className="form-section">
           <h2>Resume Information</h2>
+          <div className="cv-import-panel">
+            <p className="cv-import-title">Import Existing CV</p>
+            <p className="cv-import-subtitle">Upload a PDF or DOCX file to auto-fill this form.</p>
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleCvUpload}
+              disabled={isParsingCv}
+            />
+            {isParsingCv && <p className="cv-import-status">Parsing CV...</p>}
+            {!isParsingCv && cvParseMessage && <p className="cv-import-status success">{cvParseMessage}</p>}
+            {!isParsingCv && cvParseError && <p className="cv-import-status error">{cvParseError}</p>}
+          </div>
 
           <section className="form-group">
             {renderEditableHeading('personalInfo')}

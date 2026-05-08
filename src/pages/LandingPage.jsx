@@ -81,6 +81,20 @@ function LandingPage() {
         </ol>
       </section>
 
+      <section className="content-section">
+        <h2>CV Upload and Parsing Workflow</h2>
+        <p>
+          ResumeMaker includes CV parsing to reduce manual typing. Upload a PDF or DOCX CV and the app extracts content into the form structure
+          for personal details, summary, experience, education, projects, and skills.
+        </p>
+        <ul>
+          <li>Import CV and auto-fill all major resume sections.</li>
+          <li>Review parsed content and correct any field quickly.</li>
+          <li>Generate ATS-focused resume layouts from imported data.</li>
+          <li>Download clean PDF resumes for job applications.</li>
+        </ul>
+      </section>
+
       <section className="content-section faq">
         <h2>Resume Builder FAQ</h2>
         <h3>Is this resume builder ATS-friendly?</h3>

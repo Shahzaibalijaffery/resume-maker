@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import './LandingPage.css'
 
-const SEO_TITLE = 'AI Resume Builder | Free ATS-Friendly CV Maker Online'
+const SEO_TITLE = 'Resume Builder | Free ATS-Friendly CV Maker Online'
 const SEO_DESCRIPTION =
   'Build an ATS-friendly resume online with AI-powered suggestions, professional resume templates, PDF download, and CV parsing. Create a job-ready resume in minutes.'
 

@@ -15,7 +15,7 @@ function EditableHeading({
       {isEditing ? (
         <>
           <select
-            className="heading-edit-input"
+            className="ui-select heading-edit-input"
             value={draftValue}
             onChange={(e) => onDraftChange(e.target.value)}
           >
@@ -23,7 +23,7 @@ function EditableHeading({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-          <button type="button" className="heading-action-btn" onClick={onSave}>
+          <button type="button" className="heading-action-btn primary" onClick={onSave}>
             Save
           </button>
           <button type="button" className="heading-action-btn secondary" onClick={onCancel}>
@@ -34,7 +34,7 @@ function EditableHeading({
         <>
           <h3>{title}</h3>
           {!disableEdit && (
-            <button type="button" className="heading-action-btn" onClick={() => onStartEdit(headingKey)}>
+            <button type="button" className="heading-action-btn secondary" onClick={() => onStartEdit(headingKey)}>
               Edit
             </button>
           )}

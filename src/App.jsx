@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import EditableHeading from './components/EditableHeading'
+import FormAccordion from './components/FormAccordion'
 import { createResumePdfDocument } from './templates/resumePdfTemplate'
 import { ATS_HEADING_OPTIONS, DEFAULT_SECTION_HEADINGS, DEFAULT_RESUME_FORMAT, getResumeFormatConfig, getResumeFormatOptions } from './templates/resumeTemplateConfig'
 import { completeAppBoot } from './bootLoader.js'
@@ -91,6 +92,14 @@ function App() {
   const [editingHeadingKey, setEditingHeadingKey] = useState(null)
   const [headingDraft, setHeadingDraft] = useState('')
   const [isFormDrawerOpen, setIsFormDrawerOpen] = useState(false)
+  const [openFormSections, setOpenFormSections] = useState({
+    personalInfo: true,
+    summary: false,
+    experience: false,
+    education: false,
+    projects: false,
+    skills: false
+  })
   const isInitialBootPreview = useRef(true)
   const formatOptions = getResumeFormatOptions()
   const selectedFormatConfig = getResumeFormatConfig(resumeFormat)
@@ -264,6 +273,13 @@ function App() {
     setHeadingDraft('')
   }
 
+  const toggleFormSection = (key) => {
+    setOpenFormSections((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }
+
   const renderEditableHeading = (key) => (
     <EditableHeading
       headingKey={key}
@@ -413,262 +429,314 @@ function App() {
               Close
             </button>
           </div>
-          <section className="form-group">
-            {renderEditableHeading('personalInfo')}
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={resumeData.personalInfo.fullName}
-              onChange={(e) => handlePersonalInfoChange('fullName', e.target.value)}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={resumeData.personalInfo.email}
-              onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              value={resumeData.personalInfo.phone}
-              onChange={(e) => handlePersonalInfoChange('phone', e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Address"
-              value={resumeData.personalInfo.address}
-              onChange={(e) => handlePersonalInfoChange('address', e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="LinkedIn URL"
-              value={resumeData.personalInfo.linkedin}
-              onChange={(e) => handlePersonalInfoChange('linkedin', e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="GitHub URL"
-              value={resumeData.personalInfo.github}
-              onChange={(e) => handlePersonalInfoChange('github', e.target.value)}
-            />
-          </section>
-
-          <section className="form-group">
-            {renderEditableHeading('summary')}
-            <textarea
-              placeholder="Write a brief summary about yourself..."
-              value={resumeData.summary}
-              onChange={(e) => handleSummaryChange(e.target.value)}
-              rows="4"
-            />
-          </section>
-
-          <section className="form-group">
-            {renderEditableHeading('experience')}
-            {resumeData.experience.map((exp, index) => (
-              <div key={index} className="experience-item">
+          <div className="form-accordion">
+            <FormAccordion
+              sectionKey="personalInfo"
+              title={sectionHeadings.personalInfo}
+              hint="Name, contact, and profile links"
+              badge="01"
+              isOpen={openFormSections.personalInfo}
+              onToggle={() => toggleFormSection('personalInfo')}
+            >
+              <div className="form-group form-accordion-body">
+                {renderEditableHeading('personalInfo')}
                 <input
                   type="text"
-                  placeholder="Company"
-                  value={exp.company}
-                  onChange={(e) => handleExperienceChange(index, 'company', e.target.value)}
+                  placeholder="Full Name"
+                  value={resumeData.personalInfo.fullName}
+                  onChange={(e) => handlePersonalInfoChange('fullName', e.target.value)}
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={resumeData.personalInfo.email}
+                  onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
+                />
+                <input
+                  type="tel"
+                  placeholder="Phone"
+                  value={resumeData.personalInfo.phone}
+                  onChange={(e) => handlePersonalInfoChange('phone', e.target.value)}
                 />
                 <input
                   type="text"
-                  placeholder="Position"
-                  value={exp.position}
-                  onChange={(e) => handleExperienceChange(index, 'position', e.target.value)}
+                  placeholder="Address"
+                  value={resumeData.personalInfo.address}
+                  onChange={(e) => handlePersonalInfoChange('address', e.target.value)}
                 />
-                <div className="date-inputs">
-                  <input
-                    type="text"
-                    placeholder="Start Date (e.g., Jan 2020)"
-                    value={exp.startDate}
-                    onChange={(e) => handleExperienceChange(index, 'startDate', e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    placeholder="End Date (e.g., Present)"
-                    value={exp.endDate}
-                    onChange={(e) => handleExperienceChange(index, 'endDate', e.target.value)}
-                  />
-                </div>
-                <textarea
-                  placeholder="Job description..."
-                  value={exp.description}
-                  onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
-                  rows="3"
+                <input
+                  type="text"
+                  placeholder="LinkedIn URL"
+                  value={resumeData.personalInfo.linkedin}
+                  onChange={(e) => handlePersonalInfoChange('linkedin', e.target.value)}
                 />
-                {resumeData.experience.length > 1 && (
-                  <button
-                    type="button"
-                    className="remove-btn"
-                    onClick={() => removeExperience(index)}
-                  >
-                    Remove
-                  </button>
-                )}
+                <input
+                  type="text"
+                  placeholder="GitHub URL"
+                  value={resumeData.personalInfo.github}
+                  onChange={(e) => handlePersonalInfoChange('github', e.target.value)}
+                />
               </div>
-            ))}
-            <button type="button" className="add-btn" onClick={addExperience}>
-              + Add Experience
-            </button>
-          </section>
+            </FormAccordion>
 
-          <section className="form-group">
-            {renderEditableHeading('education')}
-            {resumeData.education.map((edu, index) => (
-              <div key={index} className="education-item">
-                <input
-                  type="text"
-                  placeholder="School/University"
-                  value={edu.school}
-                  onChange={(e) => handleEducationChange(index, 'school', e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Degree"
-                  value={edu.degree}
-                  onChange={(e) => handleEducationChange(index, 'degree', e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Field of Study"
-                  value={edu.field}
-                  onChange={(e) => handleEducationChange(index, 'field', e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Graduation Date"
-                  value={edu.graduationDate}
-                  onChange={(e) => handleEducationChange(index, 'graduationDate', e.target.value)}
-                />
-                {resumeData.education.length > 1 && (
-                  <button
-                    type="button"
-                    className="remove-btn"
-                    onClick={() => removeEducation(index)}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" className="add-btn" onClick={addEducation}>
-              + Add Education
-            </button>
-          </section>
-
-          <section className="form-group">
-            {renderEditableHeading('projects')}
-            {resumeData.projects.map((project, index) => (
-              <div key={index} className="project-item">
-                <input
-                  type="text"
-                  placeholder="Project Name"
-                  value={project.name}
-                  onChange={(e) => handleProjectChange(index, 'name', e.target.value)}
-                />
+            <FormAccordion
+              sectionKey="summary"
+              title={sectionHeadings.summary}
+              hint="A concise professional profile"
+              badge="02"
+              isOpen={openFormSections.summary}
+              onToggle={() => toggleFormSection('summary')}
+            >
+              <div className="form-group form-accordion-body">
+                {renderEditableHeading('summary')}
                 <textarea
-                  placeholder="Project description..."
-                  value={project.description}
-                  onChange={(e) => handleProjectChange(index, 'description', e.target.value)}
+                  placeholder="Write a brief summary about yourself..."
+                  value={resumeData.summary}
+                  onChange={(e) => handleSummaryChange(e.target.value)}
                   rows="4"
                 />
-                <input
-                  type="text"
-                  placeholder="Technologies Used (e.g., React, Node.js, MongoDB)"
-                  value={project.technologies}
-                  onChange={(e) => handleProjectChange(index, 'technologies', e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Project Link (GitHub, Live Demo, etc.)"
-                  value={project.link}
-                  onChange={(e) => handleProjectChange(index, 'link', e.target.value)}
-                />
-                {resumeData.projects.length > 1 && (
-                  <button
-                    type="button"
-                    className="remove-btn"
-                    onClick={() => removeProject(index)}
-                  >
-                    Remove
-                  </button>
-                )}
               </div>
-            ))}
-            <button type="button" className="add-btn" onClick={addProject}>
-              + Add Project
-            </button>
-          </section>
+            </FormAccordion>
 
-          <section className="form-group">
-            {renderEditableHeading('skills')}
-            <div className="skill-input">
-              <input
-                type="text"
-                placeholder="Add a skill and press Enter"
-                value={currentSkill}
-                onChange={(e) => setCurrentSkill(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-              <button type="button" className="add-btn" onClick={addSkill}>
-                Add
-              </button>
-            </div>
-            <div className="skills-list">
-              {resumeData.skills.map((skill, index) => (
-                <span key={index} className="skill-tag">
-                  {skill}
-                  <button
-                    type="button"
-                    className="skill-remove"
-                    onClick={() => removeSkill(index)}
-                  >
-                    ×
+            <FormAccordion
+              sectionKey="experience"
+              title={sectionHeadings.experience}
+              hint="Roles, dates, and impact"
+              badge="03"
+              isOpen={openFormSections.experience}
+              onToggle={() => toggleFormSection('experience')}
+            >
+              <div className="form-group form-accordion-body">
+                {renderEditableHeading('experience')}
+                {resumeData.experience.map((exp, index) => (
+                  <div key={index} className="experience-item">
+                    <input
+                      type="text"
+                      placeholder="Company"
+                      value={exp.company}
+                      onChange={(e) => handleExperienceChange(index, 'company', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Position"
+                      value={exp.position}
+                      onChange={(e) => handleExperienceChange(index, 'position', e.target.value)}
+                    />
+                    <div className="date-inputs">
+                      <input
+                        type="text"
+                        placeholder="Start Date (e.g., Jan 2020)"
+                        value={exp.startDate}
+                        onChange={(e) => handleExperienceChange(index, 'startDate', e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        placeholder="End Date (e.g., Present)"
+                        value={exp.endDate}
+                        onChange={(e) => handleExperienceChange(index, 'endDate', e.target.value)}
+                      />
+                    </div>
+                    <textarea
+                      placeholder="Job description..."
+                      value={exp.description}
+                      onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
+                      rows="3"
+                    />
+                    {resumeData.experience.length > 1 && (
+                      <button
+                        type="button"
+                        className="remove-btn"
+                        onClick={() => removeExperience(index)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="add-btn" onClick={addExperience}>
+                  + Add Experience
+                </button>
+              </div>
+            </FormAccordion>
+
+            <FormAccordion
+              sectionKey="education"
+              title={sectionHeadings.education}
+              hint="Degrees, schools, and graduation dates"
+              badge="04"
+              isOpen={openFormSections.education}
+              onToggle={() => toggleFormSection('education')}
+            >
+              <div className="form-group form-accordion-body">
+                {renderEditableHeading('education')}
+                {resumeData.education.map((edu, index) => (
+                  <div key={index} className="education-item">
+                    <input
+                      type="text"
+                      placeholder="School/University"
+                      value={edu.school}
+                      onChange={(e) => handleEducationChange(index, 'school', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Degree"
+                      value={edu.degree}
+                      onChange={(e) => handleEducationChange(index, 'degree', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Field of Study"
+                      value={edu.field}
+                      onChange={(e) => handleEducationChange(index, 'field', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Graduation Date"
+                      value={edu.graduationDate}
+                      onChange={(e) => handleEducationChange(index, 'graduationDate', e.target.value)}
+                    />
+                    {resumeData.education.length > 1 && (
+                      <button
+                        type="button"
+                        className="remove-btn"
+                        onClick={() => removeEducation(index)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="add-btn" onClick={addEducation}>
+                  + Add Education
+                </button>
+              </div>
+            </FormAccordion>
+
+            <FormAccordion
+              sectionKey="projects"
+              title={sectionHeadings.projects}
+              hint="Portfolio highlights and links"
+              badge="05"
+              isOpen={openFormSections.projects}
+              onToggle={() => toggleFormSection('projects')}
+            >
+              <div className="form-group form-accordion-body">
+                {renderEditableHeading('projects')}
+                {resumeData.projects.map((project, index) => (
+                  <div key={index} className="project-item">
+                    <input
+                      type="text"
+                      placeholder="Project Name"
+                      value={project.name}
+                      onChange={(e) => handleProjectChange(index, 'name', e.target.value)}
+                    />
+                    <textarea
+                      placeholder="Project description..."
+                      value={project.description}
+                      onChange={(e) => handleProjectChange(index, 'description', e.target.value)}
+                      rows="4"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Technologies Used (e.g., React, Node.js, MongoDB)"
+                      value={project.technologies}
+                      onChange={(e) => handleProjectChange(index, 'technologies', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Project Link (GitHub, Live Demo, etc.)"
+                      value={project.link}
+                      onChange={(e) => handleProjectChange(index, 'link', e.target.value)}
+                    />
+                    {resumeData.projects.length > 1 && (
+                      <button
+                        type="button"
+                        className="remove-btn"
+                        onClick={() => removeProject(index)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="add-btn" onClick={addProject}>
+                  + Add Project
+                </button>
+              </div>
+            </FormAccordion>
+
+            <FormAccordion
+              sectionKey="skills"
+              title={sectionHeadings.skills}
+              hint="Tools, technologies, and strengths"
+              badge="06"
+              isOpen={openFormSections.skills}
+              onToggle={() => toggleFormSection('skills')}
+            >
+              <div className="form-group form-accordion-body">
+                {renderEditableHeading('skills')}
+                <div className="skill-input">
+                  <input
+                    type="text"
+                    placeholder="Add a skill and press Enter"
+                    value={currentSkill}
+                    onChange={(e) => setCurrentSkill(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                  />
+                  <button type="button" className="add-btn" onClick={addSkill}>
+                    Add
                   </button>
-                </span>
-              ))}
-            </div>
-          </section>
+                </div>
+                <div className="skills-list">
+                  {resumeData.skills.map((skill, index) => (
+                    <span key={index} className="skill-tag">
+                      {skill}
+                      <button
+                        type="button"
+                        className="skill-remove"
+                        onClick={() => removeSkill(index)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </FormAccordion>
+          </div>
         </aside>
 
         <div className="preview-section">
           <div className="preview-header">
-            <div>
-              <span className="ats-badge">✓ ATS-Friendly Format</span>
-              <p className="ats-guidance">{atsGuidanceText}</p>
-            </div>
-            <div className="preview-controls">
-              <div className="format-control">
-                <label htmlFor="format-select" style={{ fontSize: '14px', fontWeight: '500' }}>Format:</label>
-                <select
-                  id="format-select"
-                  value={resumeFormat}
-                  onChange={(e) => setResumeFormat(e.target.value)}
-                  style={{
-                    padding: '6px 10px',
-                    fontSize: '14px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {formatOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+            <div className="preview-toolbar">
+              <div className="preview-toolbar-copy">
+                <div className="ats-badge" aria-label="ATS-friendly format">
+                  <span className="ats-badge-icon" aria-hidden="true">✓</span>
+                  <span className="ats-badge-copy">
+                    <span className="ats-badge-kicker">Resume</span>
+                    <span className="ats-badge-text">ATS-Friendly Format</span>
+                  </span>
+                </div>
+                <p className="ats-guidance">{atsGuidanceText}</p>
               </div>
-              <button
-                type="button"
-                className="download-btn"
-                onClick={() => downloadPDF(true)}
-                disabled={isGeneratingPDF}
-                title="Download"
-              >
-                {isGeneratingPDF ? '⏳ Generating...' : '📥 Download'}
-              </button>
+              <div className="format-chip">
+                <div className="format-chip-heading">
+                  <label htmlFor="format-select" className="format-chip-label">Template</label>
+                  <span className="format-chip-caption">Choose layout</span>
+                </div>
+                <div className="format-select-shell">
+                  <select
+                    id="format-select"
+                    className="format-select"
+                    value={resumeFormat}
+                    onChange={(e) => setResumeFormat(e.target.value)}
+                  >
+                    {formatOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
           <div className="resume-preview">
@@ -695,6 +763,17 @@ function App() {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        className="download-btn download-btn-floating"
+        onClick={() => downloadPDF(true)}
+        disabled={isGeneratingPDF}
+        title="Download resume PDF"
+        aria-label="Download resume PDF"
+      >
+        {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+      </button>
     </div>
   )
 }

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import EditableHeading from './components/EditableHeading'
 import { createResumePdfDocument } from './templates/resumePdfTemplate'
 import { ATS_HEADING_OPTIONS, DEFAULT_SECTION_HEADINGS, DEFAULT_RESUME_FORMAT, getResumeFormatConfig, getResumeFormatOptions } from './templates/resumeTemplateConfig'
+import { completeAppBoot } from './bootLoader.js'
 import './App.css'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
@@ -90,6 +91,7 @@ function App() {
   const [editingHeadingKey, setEditingHeadingKey] = useState(null)
   const [headingDraft, setHeadingDraft] = useState('')
   const [isFormDrawerOpen, setIsFormDrawerOpen] = useState(false)
+  const isInitialBootPreview = useRef(true)
   const formatOptions = getResumeFormatOptions()
   const selectedFormatConfig = getResumeFormatConfig(resumeFormat)
   const isSingleColumnFormat = selectedFormatConfig.layout === 'single-column'
@@ -304,6 +306,7 @@ function App() {
     let loadingTask = null
 
     const renderPdfPreview = async () => {
+      const shouldFinishBoot = isInitialBootPreview.current
       try {
         setPreviewError('')
         setIsRenderingPreview(true)
@@ -348,11 +351,17 @@ function App() {
           setPreviewPages([])
         }
       } finally {
-        if (!cancelled) setIsRenderingPreview(false)
+        if (!cancelled) {
+          setIsRenderingPreview(false)
+          if (shouldFinishBoot && isInitialBootPreview.current) {
+            isInitialBootPreview.current = false
+            void completeAppBoot()
+          }
+        }
       }
     }
 
-    const timeoutId = setTimeout(renderPdfPreview, 200)
+    const timeoutId = setTimeout(renderPdfPreview, 0)
     return () => {
       cancelled = true
       clearTimeout(timeoutId)

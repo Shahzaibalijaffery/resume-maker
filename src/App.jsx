@@ -389,10 +389,6 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Resume Maker</h1>
-        <p>Create your professional resume in minutes</p>
-      </header>
 
       <button
         type="button"

@@ -116,6 +116,7 @@ function LandingPage() {
         <ul>
           <li><a href="/ats-resume-guide/">ATS Resume Guide</a> for parser-friendly formatting strategy.</li>
           <li><a href="/resume-summary-examples/">Resume Summary Examples</a> for role-specific professional profiles.</li>
+          <li><a href="/resume-templates-guide/">Resume Templates Guide</a> for ATS-friendly layout and format choices.</li>
         </ul>
       </section>
 
